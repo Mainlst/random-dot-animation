@@ -14,10 +14,10 @@ class RandomDotApp:
         self.num_dots = 20
         self.speed = 1
         self.max_line_distance = 200
-        self.max_connections = 2
+        self.max_connections = 1
         self.color_change_speed = 0.2
-        self.blur_radius = 5  # ブラーの半径
-        self.fade_opacity = 3  # フェードアウトの透明度減少（0-255）
+        self.blur_radius = 3  # ブラーの半径
+        self.fade_opacity = 5  # フェードアウトの透明度減少（0-255）
 
         # キャンバスの初期化
         self.canvas = tk.Canvas(
