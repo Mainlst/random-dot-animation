@@ -11,13 +11,13 @@ class RandomDotApp:
         self.canvas_width = 800
         self.canvas_height = 600
         self.dot_size = 5  # ドットの中心サイズ
-        self.glow_size = 0  # 発光エフェクトの広がり
-        self.num_dots = 10
-        self.speed = 2
+        self.num_dots = 20
+        self.speed = 1
         self.max_line_distance = 200
-        self.max_connections = 1
+        self.max_connections = 2
         self.color_change_speed = 0.2
-        self.bluer_radius = 0.5
+        self.blur_radius = 5  # ブラーの半径
+        self.fade_opacity = 3  # フェードアウトの透明度減少（0-255）
 
         # キャンバスの初期化
         self.canvas = tk.Canvas(
@@ -25,7 +25,7 @@ class RandomDotApp:
         )
         self.canvas.pack()
 
-        # 描画用のオフスクリーンバッファ
+        # 描画用のオフスクリーンバッファ（保持する軌跡）
         self.offscreen_image = Image.new(
             "RGBA", (self.canvas_width, self.canvas_height), "black"
         )
@@ -60,10 +60,20 @@ class RandomDotApp:
         self.update_canvas()
 
     def update_canvas(self):
-        # オフスクリーン画像をクリア
-        self.offscreen_image = Image.new(
-            "RGBA", (self.canvas_width, self.canvas_height), "black"
+        # 軌跡にブラーを適用
+        self.offscreen_image = self.offscreen_image.filter(
+            ImageFilter.GaussianBlur(radius=self.blur_radius)
         )
+
+        # 軌跡を徐々に薄くする（フェードアウト処理）
+        faded_image = Image.new(
+            "RGBA",
+            (self.canvas_width, self.canvas_height),
+            (0, 0, 0, self.fade_opacity),
+        )
+        self.offscreen_image = Image.alpha_composite(self.offscreen_image, faded_image)
+
+        # 描画用のオフスクリーンバッファ
         self.draw = ImageDraw.Draw(self.offscreen_image)
 
         # ドットの中心座標を計算
@@ -97,19 +107,6 @@ class RandomDotApp:
                     random.randint(200, 255),
                 )
 
-            # ドットを描画（発光効果）
-            glow_color = (new_r, new_g, new_b, 50)  # 半透明の色
-            for glow_radius in range(self.glow_size, 0, -5):
-                alpha = int(255 * (glow_radius / self.glow_size))  # 外側ほど薄く
-                self.draw.ellipse(
-                    (
-                        x - glow_radius,
-                        y - glow_radius,
-                        x + glow_radius + self.dot_size,
-                        y + glow_radius + self.dot_size,
-                    ),
-                    fill=(new_r, new_g, new_b, alpha),
-                )
             # ドットの中心を描画
             self.draw.ellipse(
                 (x, y, x + self.dot_size, y + self.dot_size),
@@ -163,13 +160,8 @@ class RandomDotApp:
                     connections[i] += 1
                     connections[j] += 1
 
-        # 描画用画像にブラーを適用
-        blurred_image = self.offscreen_image.filter(
-            ImageFilter.GaussianBlur(radius=self.bluer_radius)
-        )
-
         # キャンバスに描画
-        self.tk_image = ImageTk.PhotoImage(blurred_image)
+        self.tk_image = ImageTk.PhotoImage(self.offscreen_image)
         self.canvas.create_image(0, 0, image=self.tk_image, anchor="nw")
 
         self.root.after(20, self.update_canvas)
