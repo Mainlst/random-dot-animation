@@ -10,15 +10,18 @@ class RandomDotApp:
         self.root.title("ランダムドット")
         self.canvas_width = 1920
         self.canvas_height = 1080
-        self.dot_size = 5  # ドットの中心サイズ
-        self.num_dots = 40
-        self.speed = 1.5  # 動きの速さ
-        self.max_line_distance = 200
-        self.max_connections = 1
-        self.color_change_speed = 0.3  # 色変化速度
-        self.blur_radius = 3  # ブラーの半径
-        self.fade_opacity = 3  # フェードアウトの透明度減少（0-255）
-        self.line_segments = 20  # 線を分割するセグメント数
+        self.dot_size = 5
+        self.num_dots = 100
+        self.speed = 3  # 初期速度
+        self.min_speed = 3  # 最小速度
+        self.max_boost_speed = 30  # ブースト時の最大速度
+        self.max_line_distance = 100
+        self.max_connections = 2
+        self.color_change_speed = 0.3
+        self.blur_radius = 3
+        self.fade_opacity = 5
+        self.line_segments = 20
+        self.boost_decay = 0.9  # 減速率（1未満）
 
         # キャンバスの初期化
         self.canvas = tk.Canvas(
@@ -26,7 +29,7 @@ class RandomDotApp:
         )
         self.canvas.pack()
 
-        # 描画用のオフスクリーンバッファ（保持する軌跡）
+        # 描画用のオフスクリーンバッファ
         self.offscreen_image = Image.new(
             "RGBA", (self.canvas_width, self.canvas_height), "black"
         )
@@ -35,6 +38,7 @@ class RandomDotApp:
         # ドット情報を初期化
         self.dots = []
         self.directions = []
+        self.speeds = []
         self.target_colors = []
         self.current_colors = []
         for _ in range(self.num_dots):
@@ -58,8 +62,26 @@ class RandomDotApp:
             self.current_colors.append(initial_color)
             self.target_colors.append(target_color)
             self.dots.append({"x": x, "y": y, "direction": direction})
+            self.speeds.append(self.speed)
+
+        # スペースキーのイベントをバインド
+        self.root.bind("<space>", self.boost_dots)
 
         self.update_canvas()
+
+    def boost_dots(self, event):
+        """スペースキーが押されたときに点をランダムな方向に加速"""
+        for i in range(len(self.dots)):
+            # ランダムな方向に変更
+            direction = [random.uniform(-1, 1), random.uniform(-1, 1)]
+            magnitude = math.hypot(direction[0], direction[1])
+            self.dots[i]["direction"] = [
+                direction[0] / magnitude,
+                direction[1] / magnitude,
+            ]
+
+            # 加速
+            self.speeds[i] = self.max_boost_speed
 
     def update_canvas(self):
         # 軌跡にブラーを適用
@@ -119,31 +141,36 @@ class RandomDotApp:
 
             # 壁に当たったら反射
             if (
-                x + direction[0] * self.speed <= 0
-                or x + direction[0] * self.speed + self.dot_size >= self.canvas_width
+                x + direction[0] * self.speeds[i] <= 0
+                or x + direction[0] * self.speeds[i] + self.dot_size
+                >= self.canvas_width
             ):
-                direction[0] = -direction[0]  # X方向の反転
+                direction[0] = -direction[0]
             if (
-                y + direction[1] * self.speed <= 0
-                or y + direction[1] * self.speed + self.dot_size >= self.canvas_height
+                y + direction[1] * self.speeds[i] <= 0
+                or y + direction[1] * self.speeds[i] + self.dot_size
+                >= self.canvas_height
             ):
-                direction[1] = -direction[1]  # Y方向の反転
+                direction[1] = -direction[1]
 
             # 新しい位置を計算
             dot["x"] = max(
                 0,
                 min(
                     self.canvas_width - self.dot_size,
-                    dot["x"] + direction[0] * self.speed,
+                    dot["x"] + direction[0] * self.speeds[i],
                 ),
             )
             dot["y"] = max(
                 0,
                 min(
                     self.canvas_height - self.dot_size,
-                    dot["y"] + direction[1] * self.speed,
+                    dot["y"] + direction[1] * self.speeds[i],
                 ),
             )
+
+            # 減速
+            self.speeds[i] = max(self.min_speed, self.speeds[i] * self.boost_decay)
 
         # 線を描画
         connections = {i: 0 for i in range(len(centers))}
@@ -189,7 +216,7 @@ class RandomDotApp:
         self.tk_image = ImageTk.PhotoImage(self.offscreen_image)
         self.canvas.create_image(0, 0, image=self.tk_image, anchor="nw")
 
-        self.root.after(16, self.update_canvas)  # 更新間隔を短くして滑らかに
+        self.root.after(16, self.update_canvas)
 
 
 if __name__ == "__main__":
