@@ -10,13 +10,14 @@ class RandomDotApp:
         self.root.title("ランダムドット")
         self.canvas_width = 800
         self.canvas_height = 600
-        self.dot_size = 10
+        self.dot_size = 5  # ドットの中心サイズ
+        self.glow_size = 0  # 発光エフェクトの広がり
         self.num_dots = 10
-        self.speed = 1
+        self.speed = 2
         self.max_line_distance = 200
         self.max_connections = 1
-        self.color_change_speed = 0.02
-        self.blur_radius = 2
+        self.color_change_speed = 0.2
+        self.bluer_radius = 0.5
 
         # キャンバスの初期化
         self.canvas = tk.Canvas(
@@ -43,10 +44,14 @@ class RandomDotApp:
             direction = [direction[0] / magnitude, direction[1] / magnitude]
 
             initial_color = "#{:02x}{:02x}{:02x}".format(
-                random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
+                random.randint(200, 255),
+                random.randint(200, 255),
+                random.randint(200, 255),
             )
             target_color = "#{:02x}{:02x}{:02x}".format(
-                random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
+                random.randint(200, 255),
+                random.randint(200, 255),
+                random.randint(200, 255),
             )
             self.current_colors.append(initial_color)
             self.target_colors.append(target_color)
@@ -87,15 +92,28 @@ class RandomDotApp:
                 and abs(new_b - target_b) < 5
             ):
                 self.target_colors[i] = "#{:02x}{:02x}{:02x}".format(
-                    random.randint(0, 255),
-                    random.randint(0, 255),
-                    random.randint(0, 255),
+                    random.randint(200, 255),
+                    random.randint(200, 255),
+                    random.randint(200, 255),
                 )
 
-            # ドットを描画
-            dot_color = (new_r, new_g, new_b, 255)
+            # ドットを描画（発光効果）
+            glow_color = (new_r, new_g, new_b, 50)  # 半透明の色
+            for glow_radius in range(self.glow_size, 0, -5):
+                alpha = int(255 * (glow_radius / self.glow_size))  # 外側ほど薄く
+                self.draw.ellipse(
+                    (
+                        x - glow_radius,
+                        y - glow_radius,
+                        x + glow_radius + self.dot_size,
+                        y + glow_radius + self.dot_size,
+                    ),
+                    fill=(new_r, new_g, new_b, alpha),
+                )
+            # ドットの中心を描画
             self.draw.ellipse(
-                (x, y, x + self.dot_size, y + self.dot_size), fill=dot_color
+                (x, y, x + self.dot_size, y + self.dot_size),
+                fill=(new_r, new_g, new_b, 255),
             )
 
             centers.append((x + self.dot_size / 2, y + self.dot_size / 2))
@@ -105,16 +123,28 @@ class RandomDotApp:
                 x + direction[0] * self.speed <= 0
                 or x + direction[0] * self.speed + self.dot_size >= self.canvas_width
             ):
-                direction[0] *= -1
+                direction[0] = -direction[0]  # X方向の反転
             if (
                 y + direction[1] * self.speed <= 0
                 or y + direction[1] * self.speed + self.dot_size >= self.canvas_height
             ):
-                direction[1] *= -1
+                direction[1] = -direction[1]  # Y方向の反転
 
             # 新しい位置を計算
-            dot["x"] += direction[0] * self.speed
-            dot["y"] += direction[1] * self.speed
+            dot["x"] = max(
+                0,
+                min(
+                    self.canvas_width - self.dot_size,
+                    dot["x"] + direction[0] * self.speed,
+                ),
+            )
+            dot["y"] = max(
+                0,
+                min(
+                    self.canvas_height - self.dot_size,
+                    dot["y"] + direction[1] * self.speed,
+                ),
+            )
 
         # 線を描画
         connections = {i: 0 for i in range(len(centers))}
@@ -135,7 +165,7 @@ class RandomDotApp:
 
         # 描画用画像にブラーを適用
         blurred_image = self.offscreen_image.filter(
-            ImageFilter.GaussianBlur(radius=self.blur_radius)
+            ImageFilter.GaussianBlur(radius=self.bluer_radius)
         )
 
         # キャンバスに描画
