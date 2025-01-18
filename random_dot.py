@@ -1,8 +1,7 @@
-from io import BytesIO
 import tkinter as tk
 import random
 import math
-from PIL import Image, ImageTk, ImageFilter
+from PIL import Image, ImageTk, ImageFilter, ImageGrab
 
 
 class RandomDotApp:
@@ -124,9 +123,15 @@ class RandomDotApp:
         self.root.after(20, self.move_dots)
 
     def apply_blur(self):
-        ps = self.canvas.postscript(colormode="color")
-        img = Image.open(BytesIO(ps.encode("utf-8")))
-        blurred = img.filter(ImageFilter.GaussianBlur(radius=2))
+        # キャンバスのウィジェット領域をキャプチャ
+        x = self.canvas.winfo_rootx()
+        y = self.canvas.winfo_rooty()
+        x1 = x + self.canvas.winfo_width()
+        y1 = y + self.canvas.winfo_height()
+
+        img = ImageGrab.grab(bbox=(x, y, x1, y1))  # 画面キャプチャ
+        blurred = img.filter(ImageFilter.GaussianBlur(radius=2))  # ブラー適用
+
         self.blurred_image = ImageTk.PhotoImage(blurred)
         self.canvas.create_image(0, 0, image=self.blurred_image, anchor="nw")
         for dot in self.dots:
