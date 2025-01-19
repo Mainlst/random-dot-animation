@@ -108,18 +108,24 @@ class RandomDotApp:
                 self.speeds[i] = self.mouse_boost_speed
 
     def update_canvas(self):
+        # 透明度を管理するフェードアウトマスクを作成
+        fade_mask = Image.new(
+            "RGBA",
+            (self.canvas_width, self.canvas_height),
+            (0, 0, 0, self.fade_opacity),  # 段階的に薄くする透明度
+        )
+
+        # 古い軌跡に対してフェードアウトを適用
+        self.offscreen_image = Image.alpha_composite(
+            Image.new("RGBA", (self.canvas_width, self.canvas_height), "black"),
+            self.offscreen_image,
+        )
+        self.offscreen_image = Image.alpha_composite(self.offscreen_image, fade_mask)
+
         # 軌跡にブラーを適用
         self.offscreen_image = self.offscreen_image.filter(
             ImageFilter.GaussianBlur(radius=self.blur_radius)
         )
-
-        # 軌跡を徐々に薄くする（フェードアウト処理）
-        faded_image = Image.new(
-            "RGBA",
-            (self.canvas_width, self.canvas_height),
-            (0, 0, 0, self.fade_opacity),
-        )
-        self.offscreen_image = Image.alpha_composite(self.offscreen_image, faded_image)
 
         # 描画用のオフスクリーンバッファ
         self.draw = ImageDraw.Draw(self.offscreen_image)
