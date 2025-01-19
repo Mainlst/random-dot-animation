@@ -2,6 +2,8 @@
 
 ランダムに動くドットが線で結ばれ、視覚的なエフェクトを楽しむためのPythonアプリケーションです。このアプリケーションでは、スペースキーやマウスクリックでインタラクティブにドットを操作することができます。
 ![blur](https://github.com/user-attachments/assets/3f768647-8b78-40b3-afc9-c86b0619eb78)
+https://github.com/user-attachments/assets/e9d1e6ee-f20a-4d70-8037-dc3a796a425f
+
 
 ## 機能
 
