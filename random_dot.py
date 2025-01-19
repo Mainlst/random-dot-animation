@@ -11,10 +11,12 @@ class RandomDotApp:
         self.canvas_width = 1920
         self.canvas_height = 1080
         self.dot_size = 5
-        self.num_dots = 100
+        self.num_dots = 200
         self.speed = 3  # 初期速度
         self.min_speed = 3  # 最小速度
-        self.max_boost_speed = 30  # ブースト時の最大速度
+        self.max_boost_speed = 30  # キーによる最大速度
+        self.mouse_boost_speed = 20  # マウスで弾く際の速さ
+        self.mouse_radius = 300  # マウスの影響範囲
         self.max_line_distance = 100
         self.max_connections = 2
         self.color_change_speed = 0.3
@@ -66,6 +68,8 @@ class RandomDotApp:
 
         # スペースキーのイベントをバインド
         self.root.bind("<space>", self.boost_dots)
+        # マウスクリックのイベントをバインド
+        self.canvas.bind("<Button-1>", self.mouse_boost)
 
         self.update_canvas()
 
@@ -82,6 +86,26 @@ class RandomDotApp:
 
             # 加速
             self.speeds[i] = self.max_boost_speed
+
+    def mouse_boost(self, event):
+        """マウスクリックでカーソル付近の点を弾く"""
+        mouse_x, mouse_y = event.x, event.y
+
+        for i, dot in enumerate(self.dots):
+            x, y = dot["x"], dot["y"]
+            # マウスからの距離を計算
+            distance = math.sqrt((mouse_x - x) ** 2 + (mouse_y - y) ** 2)
+            if distance <= self.mouse_radius:
+                # マウスからの反射方向を計算
+                direction = [x - mouse_x, y - mouse_y]
+                magnitude = math.hypot(direction[0], direction[1])
+                if magnitude != 0:  # ゼロ除算を防止
+                    direction = [direction[0] / magnitude, direction[1] / magnitude]
+                else:
+                    direction = [random.uniform(-1, 1), random.uniform(-1, 1)]
+                self.dots[i]["direction"] = direction
+                # 加速
+                self.speeds[i] = self.mouse_boost_speed
 
     def update_canvas(self):
         # 軌跡にブラーを適用
