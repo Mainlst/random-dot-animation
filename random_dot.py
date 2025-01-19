@@ -108,24 +108,18 @@ class RandomDotApp:
                 self.speeds[i] = self.mouse_boost_speed
 
     def update_canvas(self):
-        # 透明度を管理するフェードアウトマスクを作成
-        fade_mask = Image.new(
-            "RGBA",
-            (self.canvas_width, self.canvas_height),
-            (0, 0, 0, self.fade_opacity),  # 段階的に薄くする透明度
-        )
-
-        # 古い軌跡に対してフェードアウトを適用
-        self.offscreen_image = Image.alpha_composite(
-            Image.new("RGBA", (self.canvas_width, self.canvas_height), "black"),
-            self.offscreen_image,
-        )
-        self.offscreen_image = Image.alpha_composite(self.offscreen_image, fade_mask)
-
         # 軌跡にブラーを適用
         self.offscreen_image = self.offscreen_image.filter(
             ImageFilter.GaussianBlur(radius=self.blur_radius)
         )
+
+        # 軌跡を徐々に薄くする（フェードアウト処理）
+        faded_image = Image.new(
+            "RGBA",
+            (self.canvas_width, self.canvas_height),
+            (0, 0, 0, self.fade_opacity),
+        )
+        self.offscreen_image = Image.alpha_composite(self.offscreen_image, faded_image)
 
         # 描画用のオフスクリーンバッファ
         self.draw = ImageDraw.Draw(self.offscreen_image)
@@ -133,7 +127,7 @@ class RandomDotApp:
         # ドットの中心座標を計算
         centers = []
 
-        # ドットの更新と描画
+        # ドットの更新
         for i, dot in enumerate(self.dots):
             x, y = dot["x"], dot["y"]
             direction = dot["direction"]
@@ -160,12 +154,6 @@ class RandomDotApp:
                     random.randint(50, 255),
                     random.randint(100, 255),
                 )
-
-            # ドットの中心を描画
-            self.draw.ellipse(
-                (x, y, x + self.dot_size, y + self.dot_size),
-                fill=(new_r, new_g, new_b, 255),
-            )
 
             centers.append((x + self.dot_size / 2, y + self.dot_size / 2))
 
@@ -203,16 +191,21 @@ class RandomDotApp:
             self.speeds[i] = max(self.min_speed, self.speeds[i] * self.boost_decay)
 
         # 線を描画
-        connections = {i: 0 for i in range(len(centers))}
-        for i in range(len(centers)):
-            for j in range(i + 1, len(centers)):
+        connections = {i: 0 for i in range(len(self.dots))}
+        for i in range(len(self.dots)):
+            for j in range(i + 1, len(self.dots)):
                 if (
                     connections[i] >= self.max_connections
                     or connections[j] >= self.max_connections
                 ):
                     continue
-                x1, y1 = centers[i]
-                x2, y2 = centers[j]
+                # 点の中心座標を正確に計算
+                x1 = self.dots[i]["x"] + self.dot_size / 2
+                y1 = self.dots[i]["y"] + self.dot_size / 2
+                x2 = self.dots[j]["x"] + self.dot_size / 2
+                y2 = self.dots[j]["y"] + self.dot_size / 2
+
+                # 距離を計算
                 dist = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
                 if dist <= self.max_line_distance:
                     # 点の色を取得
@@ -224,6 +217,7 @@ class RandomDotApp:
                         int(self.current_colors[j][j : j + 2], 16)
                         for j in range(1, 7, 2)
                     ]
+
                     # 線をセグメントに分割して色を補間
                     for k in range(self.line_segments):
                         t = k / (self.line_segments - 1)
@@ -241,6 +235,17 @@ class RandomDotApp:
                         )
                     connections[i] += 1
                     connections[j] += 1
+
+        # ドットを最前面に描画
+        for i, dot in enumerate(self.dots):
+            x, y = dot["x"], dot["y"]
+            current_r, current_g, current_b = [
+                int(self.current_colors[i][j : j + 2], 16) for j in range(1, 7, 2)
+            ]
+            self.draw.ellipse(
+                (x, y, x + self.dot_size, y + self.dot_size),
+                fill=(current_r, current_g, current_b, 255),
+            )
 
         # キャンバスに描画
         self.tk_image = ImageTk.PhotoImage(self.offscreen_image)
